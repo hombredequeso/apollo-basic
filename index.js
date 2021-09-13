@@ -458,8 +458,22 @@ const server = new ApolloServer(
     context: () => ({
       dataSources: getDataSources(),
       data: getData()
-    })
+    }),
+  plugins: [
+    {
+      async serverWillStart(x) {
+        console.log('Server starting up!!!!!!\n' + JSON.stringify(x, null , ' '));
+      },
+      async requestDidStart(x) {
+        if (x?.request?.operationName === 'IntrospectionQuery') return;
+
+        console.log('===================================================')
+        console.log(`REQUEST DID START:\n${JSON.stringify(x, null, ' ')}`);
+      }
+    }
+  ]
   });
+
 
 // Launch the server
 server.listen().then(({ url }) => {
