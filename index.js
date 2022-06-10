@@ -3,6 +3,14 @@ const { makeExecutableSchema } = require('@graphql-tools/schema');
 const { mapSchema, getDirective, MapperKind } = require('@graphql-tools/utils');
 const { defaultFieldResolver } = require('graphql');
 
+const logger = console;
+// const logger = {
+//   log: () => {},
+//   error: () => {},
+//   debug: () => {},
+//   info: () => {}
+//   warn: () => {}
+// };
 
 const libraries = [
   {
@@ -187,7 +195,7 @@ const typeDefs = gql`
   }
 
   type Widget {
-    id: String!
+    id: String! @count
     description: String!
     myconst: String @constvalue(value: "Abc,123")
   }
@@ -448,6 +456,34 @@ function constValueDirectiveTransformer(schema, directiveName) {
   });
 }
 
+const counter = {};
+const incrementCounter =  (key) => {
+  if (counter[key] === undefined) {
+    counter[key] = 0;
+  }
+  counter[key] = counter[key] + 1;
+}
+
+function countValueDirectiveTransformer(schema, directiveName) {
+  return mapSchema(schema, {
+    [MapperKind.OBJECT_FIELD]: (fieldConfig) => {
+      const countValueDirective = getDirective(schema, fieldConfig, directiveName)?.[0];
+      if (countValueDirective) {
+        const { resolve = defaultFieldResolver } = fieldConfig;
+        return {
+          ...fieldConfig,
+          resolve: function (source, args, context, info) {
+            const countFieldKey = `${info.parentType.name}.${info.fieldName}`;
+            incrementCounter(countFieldKey);
+            logger.log('counter state:', {counter});
+            return resolve(source, args, context, info);
+          }
+        }
+      }
+    }
+  });
+}
+
 const getDataSources = () => ({
         libraries,
         books,
@@ -480,14 +516,22 @@ const getData = () => {
   }
   return data;
 }
+const countDirectiveTypeDefs = (directiveName) => gql`
+  directive @${directiveName} on FIELD_DEFINITION
+`;
+
 
 let schema = makeExecutableSchema({
-  typeDefs,
+  typeDefs: [
+    countDirectiveTypeDefs('count'),
+    typeDefs
+  ],
   resolvers
 });
 
 // Transform the schema by applying directive logic
 schema = constValueDirectiveTransformer(schema, 'constvalue');
+schema = countValueDirectiveTransformer(schema, 'count');
 
 // Pass schema definition and resolvers to the
 // ApolloServer constructor
@@ -502,12 +546,12 @@ const server = new ApolloServer(
   plugins: [
     {
       async serverWillStart(x) {
-        console.log('Server starting up!!!!!!\n' + JSON.stringify(x, null , ' '));
+        logger.log('Server starting up!!!!!!\n' + JSON.stringify(x, null , ' '));
       },
       async requestDidStart(x) {
         if (x?.request?.operationName === 'IntrospectionQuery') return;
 
-        console.log(`REQUEST DID START: ${x?.request?.operationName}`);
+        logger.log(`REQUEST DID START: ${x?.request?.operationName}`);
         // console.log(`${JSON.stringify(x, null, ' ')}`);
       }
     }
