@@ -1,5 +1,8 @@
 const { ApolloServer, gql } = require('apollo-server');
-const { convertNodeHttpToRequest } = require('apollo-server-core');
+const { makeExecutableSchema } = require('@graphql-tools/schema');
+const { mapSchema, getDirective, MapperKind } = require('@graphql-tools/utils');
+const { defaultFieldResolver } = require('graphql');
+
 
 const libraries = [
   {
@@ -97,6 +100,9 @@ const cs = [
 
 // Schema definition
 const typeDefs = gql`
+  directive @constvalue(
+    value: String = "CONSTVALUE"
+  ) on FIELD_DEFINITION
 
   type Address {
     title: String
@@ -183,6 +189,7 @@ const typeDefs = gql`
   type Widget {
     id: String!
     description: String!
+    myconst: String @constvalue(value: "Abc,123")
   }
 
   type ExtraWidgetStuff {
@@ -237,7 +244,7 @@ const resolvers = {
     widgets() {
       return widgets.map((w) => ({
         widget: w,
-        extras: { id: w.id },
+        extras: { id: w.id }
       }));
     },
     things() {
@@ -250,7 +257,7 @@ const resolvers = {
       return libraries;
     },
     a(parent, args, context, info) {
-      console.log(`Query.a resolver, parent = ${JSON.stringify(parent)}`);
+      // console.log(`Query.a resolver, parent = ${JSON.stringify(parent)}`);
       return {
         id: "aId",
         description: "This is an a",
@@ -261,7 +268,7 @@ const resolvers = {
       return [a];
     },
     b() {
-      console.log("Query.b resolver");
+      // console.log("Query.b resolver");
       return {
         id: "bId",
         name: "name of b",
@@ -289,6 +296,9 @@ const resolvers = {
     description() {
       return "dummy description";
     },
+    myconst() {
+      return "hello there"
+    }
   },
   ExtraWidgetStuff: {
     extras(parent, args, context) {
@@ -306,14 +316,14 @@ const resolvers = {
   },
   Thing1: {
     description() {
-      console.log("executing Thing1 resolver");
+      // console.log("executing Thing1 resolver");
       throw new Exception("oops...");
       return "thing1 desc" + new Date();
     },
   },
   Thing2: {
     description() {
-      console.log("executing Thing2 resolver");
+      // console.log("executing Thing2 resolver");
       return "thing2 desc: " + new Date().toISOString();
     },
   },
@@ -355,7 +365,7 @@ const resolvers = {
     //   return {cId: 99999};
     // },
     cs() {
-      console.log("AType.cs resolver");
+      // console.log("AType.cs resolver");
       return [];
     },
     x() {
@@ -364,11 +374,11 @@ const resolvers = {
   },
   CType: {
     id(parent, args, context, info) {
-      console.log("CType.id resolver");
+      // console.log("CType.id resolver");
       return "c id from CType.id";
     },
     description(parent, args, context, info) {
-      console.log("CType.description resolver");
+      // console.log("CType.description resolver");
       return `Id desc from CType.description: parent = ${JSON.stringify(
         parent
       )}`;
@@ -416,6 +426,28 @@ const resolvers = {
   },
 };
 
+function constValueDirectiveTransformer(schema, directiveName) {
+  return mapSchema(schema, {
+    [MapperKind.OBJECT_FIELD]: (fieldConfig) => {
+      const constValueDirective = getDirective(schema, fieldConfig, directiveName)?.[0];
+      if (constValueDirective) {
+        const constValue = constValueDirective['value'];
+        const { resolve = defaultFieldResolver } = fieldConfig;
+        return {
+          ...fieldConfig,
+          resolve: async function (source, args, context, info) {
+            const result = await resolve(source, args, context, info)
+            if (typeof result === 'string') {
+              return `${result} : ${constValue}`
+            }
+            return result;
+          }
+        }
+      }
+    }
+  });
+}
+
 const getDataSources = () => ({
         libraries,
         books,
@@ -432,7 +464,7 @@ const getExtrasWidgetInfo = (id) => {
     extras: "promised extras for " + id,
     moreExtras: "more promised extras for " + id
   }
-  console.log("getExtrasWidgetInfo")
+  // console.log("getExtrasWidgetInfo")
 
   return new Promise(function(resolve, reject){
     setTimeout(() => resolve(result), 1000);
@@ -449,12 +481,20 @@ const getData = () => {
   return data;
 }
 
+let schema = makeExecutableSchema({
+  typeDefs,
+  resolvers
+});
+
+// Transform the schema by applying directive logic
+schema = constValueDirectiveTransformer(schema, 'constvalue');
+
 // Pass schema definition and resolvers to the
 // ApolloServer constructor
 const server = new ApolloServer(
   {
-    typeDefs,
-    resolvers,
+    schema,
+    csrfPrevention: true,
     context: () => ({
       dataSources: getDataSources(),
       data: getData()
@@ -467,12 +507,13 @@ const server = new ApolloServer(
       async requestDidStart(x) {
         if (x?.request?.operationName === 'IntrospectionQuery') return;
 
-        console.log('===================================================')
-        console.log(`REQUEST DID START:\n${JSON.stringify(x, null, ' ')}`);
+        console.log(`REQUEST DID START: ${x?.request?.operationName}`);
+        // console.log(`${JSON.stringify(x, null, ' ')}`);
       }
     }
   ]
   });
+
 
 
 // Launch the server
