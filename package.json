@@ -11,8 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "apollo-server": "^2.16.1",
-    "graphql": "^15.3.0",
+    "apollo-server": "^3.8.2",
     "nodemon": "^2.0.4"
   }
 }
