@@ -4,14 +4,9 @@ const { mapSchema, getDirective, MapperKind } = require('@graphql-tools/utils');
 const { defaultFieldResolver, graphql } = require('graphql');
 const {parse, visit} = require('graphql')
 
+const { visitor} = require('./visitor.js')
+
 const logger = console;
-// const logger = {
-//   log: () => {},
-//   error: () => {},
-//   debug: () => {},
-//   info: () => {}
-//   warn: () => {}
-// };
 
 const libraries = [
   {
@@ -534,22 +529,6 @@ let schema = makeExecutableSchema({
 schema = constValueDirectiveTransformer(schema, 'constvalue');
 schema = countValueDirectiveTransformer(schema, 'count');
 
-const visitor = {
-  enter(node) {
-    const logData = {
-      ...node,
-      loc: undefined
-    };
-    logger.log('enter', logData);
-  },
-  leave(node) {
-    const logData = {
-      ...node,
-      loc: undefined
-    };
-    logger.log('exit', logData);
-  }
-};
 
 
 const currentFieldPath = [];
