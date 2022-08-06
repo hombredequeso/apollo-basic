@@ -4,243 +4,15 @@ const { mapSchema, getDirective, MapperKind } = require('@graphql-tools/utils');
 const { defaultFieldResolver, graphql } = require('graphql');
 const {parse, visit} = require('graphql')
 
-const { visitor} = require('./visitor.js')
+const { visitor, getFieldListingVisitor } = require('./visitor.js')
 
 const logger = console;
 
-const libraries = [
-  {
-    branch: 'downtown'
-  },
-  {
-    branch: 'riverside'
-  },
-];
+const {libraries, addresses, books, articles, authors, a, b, cs, widgets, extrasWidgetInfo } = require('./database.js')
+const typeDefs = require('./schema.js')
 
-const addresses = [
-  {
-    title: 'downtown',
-    address: '1 nowheres ville'
-  },
-  {
-    title: 'riverside',
-    address: '1 river rv'
-  },
-  {
-    title: 'J.K. Rowling',
-    address: '1 rowling st'
-  }
-]
+const {constValueDirectiveTransformer, countValueDirectiveTransformer} = require('./directives.js')
 
-// The branch field of a book indicates which library has it in stock
-const books = [
-  {
-    title: 'Harry Potter and the Chamber of Secrets',
-    author: 'J.K. Rowling',
-    branch: 'riverside'
-  },
-  {
-    title: 'Jurassic Park',
-    author: 'Michael Crichton',
-    branch: 'downtown'
-  },
-];
-
-const articles = [
-  {
-    title: 'Harry and the Harriets',
-    periodical: 'Witches and Wizards',
-    writer: 'J.K. Rowling',
-    branch: 'riverside'
-  },
-  {
-    title: 'Harry and the Harriets Pt 2',
-    periodical: 'Witches and Wizards',
-    writer: 'J.K. Rowling',
-    branch: 'riverside'
-  }
-]
-
-const authors = [
-  {
-    name: 'J.K. Rowling',
-    country: 'Great Britain'
-  },
-  {
-    name: 'Michael Crichton',
-    country: 'USA'
-  }
-]
-
-const a = {
-    id: "aId",
-    description: "This is an a",
-    cOtherId: "999",
-}
-
-const b = {
-    id: "bId",
-    name: "name of b",
-    cId: "888"
-}
-
-const cs = [
-  {
-    id: "888",
-    description: "instance 888"
-  },
-  {
-    id: "999",
-    description: "instance 999"
-  },
-]
-
-
-// const addresses = [
-//   {
-//     title: 'downtown',
-//     address: '1 nowheres ville'
-//   },
-
-// Schema definition
-const typeDefs = gql`
-  directive @constvalue(
-    value: String = "CONSTVALUE"
-  ) on FIELD_DEFINITION
-
-  type Address {
-    title: String
-    address: String
-  }
-
-  type Article {
-    title: String
-    periodical: String
-    writer: Author
-  }
-
-# A library has a branch and books
-  type Library {
-    branch: String!
-    details: LibraryDetails
-    books: [Book!]
-    articles: [Article!],
-    address: Address
-  }
-
-  type LibraryDetails {
-    description: String
-  }
-
-  # A book has a title and author
-  type Book {
-    title: String!
-    author: Author!
-  }
-
-  # An author has a name
-  type Author {
-    name: String!
-    country: String
-    address: Address
-  }
-
-  type AType {
-    id: String!
-    description: String
-    c: CType
-    cs: [CType]
-    x: String
-  }
-
-  type BType {
-    id: String!
-    name: String
-    c: CType
-  }
-
-  type CType {
-    id: String!
-    description: String
-  }
-
-  interface Error {
-    description: String
-  }
-
-  type GeneralError implements Error {
-    description: String
-  }
-
-  type SpecificError implements Error {
-    description: String
-    extraDetail: String
-  }
-
-  type Thing1 {
-    description: String
-  }
-
-  type Thing2 {
-    description: String
-  }
-
-  type Things {
-    thing1: Thing1
-    thing2: Thing2
-  }
-
-  type Widget {
-    id: String! @count
-    description: String!
-    myconst: String @constvalue(value: "Abc,123")
-  }
-
-  type ExtraWidgetStuff {
-    extras: String!
-    moreExtras: String!
-  }
-
-  type WidgetWrapper {
-    widget: Widget!
-    extras: ExtraWidgetStuff
-  }
-
-
-  # Queries can fetch a list of libraries
-  type Query {
-    widgets: [WidgetWrapper!]!
-    libraries: [Library]
-    a: AType
-    as: [AType]
-    b: BType
-    errors: [Error]
-    things: Things
-  }
-`;
-
-
-const widgets = [
-  {
-    id: "111",
-    description: "widget 111"
-  },
-  {
-    id: "222",
-    description: "widget 222"
-  }
-]
-
-const extrasWidgetInfo = [
-  {
-    id: "111",
-    description: "widget 111 extras"
-  },
-  {
-    id: "222",
-    description: "widget 222 extras"
-  }
-];
 
 
 const resolvers = {
@@ -430,55 +202,6 @@ const resolvers = {
   },
 };
 
-function constValueDirectiveTransformer(schema, directiveName) {
-  return mapSchema(schema, {
-    [MapperKind.OBJECT_FIELD]: (fieldConfig) => {
-      const constValueDirective = getDirective(schema, fieldConfig, directiveName)?.[0];
-      if (constValueDirective) {
-        const constValue = constValueDirective['value'];
-        const { resolve = defaultFieldResolver } = fieldConfig;
-        return {
-          ...fieldConfig,
-          resolve: async function (source, args, context, info) {
-            const result = await resolve(source, args, context, info)
-            if (typeof result === 'string') {
-              return `${result} : ${constValue}`
-            }
-            return result;
-          }
-        }
-      }
-    }
-  });
-}
-
-const counter = {};
-const incrementCounter =  (key) => {
-  if (counter[key] === undefined) {
-    counter[key] = 0;
-  }
-  counter[key] = counter[key] + 1;
-}
-
-function countValueDirectiveTransformer(schema, directiveName) {
-  return mapSchema(schema, {
-    [MapperKind.OBJECT_FIELD]: (fieldConfig) => {
-      const countValueDirective = getDirective(schema, fieldConfig, directiveName)?.[0];
-      if (countValueDirective) {
-        const { resolve = defaultFieldResolver } = fieldConfig;
-        return {
-          ...fieldConfig,
-          resolve: function (source, args, context, info) {
-            const countFieldKey = `${info.parentType.name}.${info.fieldName}`;
-            incrementCounter(countFieldKey);
-            logger.log('counter state:', {counter});
-            return resolve(source, args, context, info);
-          }
-        }
-      }
-    }
-  });
-}
 
 const getDataSources = () => ({
         libraries,
@@ -503,7 +226,6 @@ const getExtrasWidgetInfo = (id) => {
   })
 };
 
-
 const getData = () => {
   const data = {};
   data.cache = (key, futureGet) => {
@@ -512,10 +234,11 @@ const getData = () => {
   }
   return data;
 }
+
+// Build up the schema: 
 const countDirectiveTypeDefs = (directiveName) => gql`
   directive @${directiveName} on FIELD_DEFINITION
 `;
-
 
 let schema = makeExecutableSchema({
   typeDefs: [
@@ -529,28 +252,6 @@ let schema = makeExecutableSchema({
 schema = constValueDirectiveTransformer(schema, 'constvalue');
 schema = countValueDirectiveTransformer(schema, 'count');
 
-
-
-const currentFieldPath = [];
-const allFieldPaths = [];
-
-const getFieldListingVisitor = (currentFieldPath, allFieldPaths) => {
-  return {
-    Field: {
-      enter(node) {
-        if (node?.name?.kind === 'Name') {
-          currentFieldPath.push(node.name.value)
-        }
-      },
-      leave(node) {
-        if (node?.name?.kind === 'Name') {
-          allFieldPaths.push([...currentFieldPath])
-          currentFieldPath.pop();
-        }
-      }
-    }
-  }
-}
 
 // Pass schema definition and resolvers to the
 // ApolloServer constructor
@@ -587,7 +288,6 @@ const server = new ApolloServer(
     }
   ]
   });
-
 
 
 // Launch the server

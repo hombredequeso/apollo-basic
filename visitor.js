@@ -18,4 +18,24 @@ const visitor = {
   }
 };
 
-module.exports = {visitor};
+
+const getFieldListingVisitor = (currentFieldPath, allFieldPaths) => {
+  return {
+    Field: {
+      enter(node) {
+        if (node?.name?.kind === 'Name') {
+          currentFieldPath.push(node.name.value)
+        }
+      },
+      leave(node) {
+        if (node?.name?.kind === 'Name') {
+          allFieldPaths.push([...currentFieldPath])
+          currentFieldPath.pop();
+        }
+      }
+    }
+  }
+}
+
+module.exports = {visitor, getFieldListingVisitor};
+
