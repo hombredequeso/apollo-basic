@@ -28,6 +28,14 @@ query TestQuery {
 }
 ```
 
+```
+curl --request POST \
+    --header 'content-type: application/json' \
+    --url http://localhost:4000/ \
+    --data '{"query":"query GetCompanyData($companyId: String!) {\n company(id: $companyId) {\n   name\n   description\n   reviews {\n     review\n   }\n   }\n }","variables":{"companyId":"hombreDeQuesoInc"}}'
+```
+
+
 Try out the query in the [Apollo graphq sandbox explorer](https://studio.apollographql.com/sandbox/explorer)
 
 
