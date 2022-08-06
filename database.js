@@ -116,6 +116,18 @@ const extrasWidgetInfo = [
   }
 ];
 
+const company = {
+    id: 'hombreDeQuesoInc',
+    name: 'Hombre de Queso Inc.',
+    description: 'A bit of everything really'
+}
 
+const companyReviews = {
+    hombreDeQuesoInc: [
+        {
+            review: "truly excellent"
+        }
+    ]
+}
 
-module.exports = {libraries, addresses, books, articles, authors, a, b, cs, widgets, extrasWidgetInfo }
+module.exports = {libraries, addresses, books, articles, authors, a, b, cs, widgets, extrasWidgetInfo, companyReviews, company }

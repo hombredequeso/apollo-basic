@@ -105,6 +105,18 @@ const typeDefs = gql`
     extras: ExtraWidgetStuff
   }
 
+  # Company:
+
+  type Company {
+      id: String!
+      name: String!
+      description: String!
+      reviews: [CompanyReview]
+  }
+
+  type CompanyReview {
+      review: String!
+  }
 
   # Queries can fetch a list of libraries
   type Query {
@@ -115,6 +127,8 @@ const typeDefs = gql`
     b: BType
     errors: [Error]
     things: Things
+
+    company(id: String!): Company
   }
 `;
 

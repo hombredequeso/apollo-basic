@@ -8,14 +8,31 @@ const { visitor, getFieldListingVisitor } = require('./visitor.js')
 
 const logger = console;
 
-const {libraries, addresses, books, articles, authors, a, b, cs, widgets, extrasWidgetInfo } = require('./database.js')
+const {libraries, addresses, books, articles, authors, a, b, cs, widgets, extrasWidgetInfo, companyReviews, company } = require('./database.js')
 const typeDefs = require('./schema.js')
 
 const {constValueDirectiveTransformer, countValueDirectiveTransformer} = require('./directives.js')
 
+function DataSource(data) {
+  this.loader = null;
+  this.get = function() {
+    logger.log('executing DataSource.get')
+    if (this.loader !== null) {
+      logger.log('using cached promise')
+      return this.loader;
+    }
 
+    logger.log('creating new Promise...')
+    this.loader = new Promise(function(resolve, reject){
+      setTimeout(() => resolve(data), 1000);
+    })
+
+    return this.loader;
+  }
+}
 
 const resolvers = {
+  // Top level Query resolvers:
   Query: {
     widgets() {
       return widgets.map((w) => ({
@@ -64,7 +81,14 @@ const resolvers = {
         },
       ];
     },
+    company(parent, args, context, info) {
+      return {
+        id: args.id
+      }
+    }
   },
+
+  // Type resolvers:
   Widget: {
     id() {
       return "dummyid";
@@ -200,6 +224,30 @@ const resolvers = {
       return "address country";
     },
   },
+  Company: {
+    name(parent, args, context, info) {
+      logger.log('Resolving Company.name');
+      return context.dataSources.company.get().then(x => {
+        console.log("processing response to get name")
+        return x.name;
+      });
+      // return "companyName";
+      // return context.dataSources.company.get().name;
+    },
+    description(parent, args, context, info) {
+      logger.log('Resolving Company.description');
+      // return "companyDescription";
+      return context.dataSources.company.get().then(x => {
+        console.log("processing response to get description")
+        return x.description;
+      });
+    },
+    reviews(parent, args, context, info) {
+      logger.log('Resolving Company.reviews');
+      const companyId = parent.id;
+      return companyReviews[companyId] || [];
+    }
+  }
 };
 
 
@@ -210,7 +258,8 @@ const getDataSources = () => ({
         articles,
         a,
         b,
-        cs
+        cs,
+        company: new DataSource(company)
 });
 
 const getExtrasWidgetInfo = (id) => {
