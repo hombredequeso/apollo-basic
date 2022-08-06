@@ -1,7 +1,8 @@
 const { ApolloServer, gql } = require('apollo-server');
 const { makeExecutableSchema } = require('@graphql-tools/schema');
 const { mapSchema, getDirective, MapperKind } = require('@graphql-tools/utils');
-const { defaultFieldResolver } = require('graphql');
+const { defaultFieldResolver, graphql } = require('graphql');
+const {parse, visit} = require('graphql')
 
 const logger = console;
 // const logger = {
@@ -533,6 +534,45 @@ let schema = makeExecutableSchema({
 schema = constValueDirectiveTransformer(schema, 'constvalue');
 schema = countValueDirectiveTransformer(schema, 'count');
 
+const visitor = {
+  enter(node) {
+    const logData = {
+      ...node,
+      loc: undefined
+    };
+    logger.log('enter', logData);
+  },
+  leave(node) {
+    const logData = {
+      ...node,
+      loc: undefined
+    };
+    logger.log('exit', logData);
+  }
+};
+
+
+const currentFieldPath = [];
+const allFieldPaths = [];
+
+const getFieldListingVisitor = (currentFieldPath, allFieldPaths) => {
+  return {
+    Field: {
+      enter(node) {
+        if (node?.name?.kind === 'Name') {
+          currentFieldPath.push(node.name.value)
+        }
+      },
+      leave(node) {
+        if (node?.name?.kind === 'Name') {
+          allFieldPaths.push([...currentFieldPath])
+          currentFieldPath.pop();
+        }
+      }
+    }
+  }
+}
+
 // Pass schema definition and resolvers to the
 // ApolloServer constructor
 const server = new ApolloServer(
@@ -550,6 +590,17 @@ const server = new ApolloServer(
       },
       async requestDidStart(x) {
         if (x?.request?.operationName === 'IntrospectionQuery') return;
+
+        const query = x.request?.query;
+        if (!query) return;
+        const parsedQuery = parse(query);
+        logger.log({parsedQuery});
+        visit(parsedQuery, visitor);
+
+        const currentPath = [];
+        const allPaths = [];
+        visit(parsedQuery, getFieldListingVisitor(currentPath, allPaths));
+        logger.log('allPaths: ', JSON.stringify(allPaths));
 
         logger.log(`REQUEST DID START: ${x?.request?.operationName}`);
         // console.log(`${JSON.stringify(x, null, ' ')}`);
