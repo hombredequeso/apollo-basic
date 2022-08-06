@@ -122,6 +122,15 @@ const company = {
     description: 'A bit of everything really'
 }
 
+const companies = {
+    hombreDeQuesoInc: company,
+    mickyAndCo: {
+        id: 'mickyAndCo',
+        name: 'Micky & Co.',
+        description: 'Sleeping and Eating'
+    }
+}
+
 const companyReviews = {
     hombreDeQuesoInc: [
         {
@@ -130,4 +139,4 @@ const companyReviews = {
     ]
 }
 
-module.exports = {libraries, addresses, books, articles, authors, a, b, cs, widgets, extrasWidgetInfo, companyReviews, company }
+module.exports = {libraries, addresses, books, articles, authors, a, b, cs, widgets, extrasWidgetInfo, companyReviews, company, companies }

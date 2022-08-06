@@ -8,10 +8,47 @@ const { visitor, getFieldListingVisitor } = require('./visitor.js')
 
 const logger = console;
 
-const {libraries, addresses, books, articles, authors, a, b, cs, widgets, extrasWidgetInfo, companyReviews, company } = require('./database.js')
+const {libraries, addresses, books, articles, authors, a, b, cs, widgets, extrasWidgetInfo, companyReviews, company, companies } = require('./database.js')
 const typeDefs = require('./schema.js')
 
 const {constValueDirectiveTransformer, countValueDirectiveTransformer} = require('./directives.js')
+
+const getCompany = (id) => {
+  logger.log('getCompany: ' + id);
+  const result = companies[id] || null;
+  logger.log('will return result: ', result)
+  return new Promise(function(resolve, reject){
+    setTimeout(() => resolve(result), 1000);
+  })
+}
+
+const memoize = (fn) => {
+  logger.log('....creating empty cache....')
+  let cache = {};
+  return (...args) => {
+    let n = args[0];  
+    if (n in cache) {
+      logger.log('Fetching from cache');
+      return cache[n];
+    }
+    else {
+      logger.log('Calculating result');
+      let result = fn(n);
+      cache[n] = result;
+      return result;
+    }
+  }
+}
+
+// Don't do this (because we aren't in a functional world people)...
+// const getCompanyDataLoader = memoize(getCompany);
+// const createCompanyDataLoader  = () => {
+//   return getCompanyDataLoader;
+// }
+
+const createCompanyDataLoader  = () => {
+  return memoize(getCompany);
+}
 
 function DataSource(data) {
   this.loader = null;
@@ -226,9 +263,9 @@ const resolvers = {
   },
   Company: {
     name(parent, args, context, info) {
-      logger.log('Resolving Company.name');
-      return context.dataSources.company.get().then(x => {
-        console.log("processing response to get name")
+      logger.log('Resolving Company.name:', {parent, args});
+      return context.dataSources.getCompany(parent.id).then(x => {
+        console.log("processing response to get name", x)
         return x.name;
       });
       // return "companyName";
@@ -237,8 +274,8 @@ const resolvers = {
     description(parent, args, context, info) {
       logger.log('Resolving Company.description');
       // return "companyDescription";
-      return context.dataSources.company.get().then(x => {
-        console.log("processing response to get description")
+      return context.dataSources.getCompany(parent.id).then(x => {
+        console.log("processing response to get description", x)
         return x.description;
       });
     },
@@ -259,7 +296,8 @@ const getDataSources = () => ({
         a,
         b,
         cs,
-        company: new DataSource(company)
+        company: new DataSource(company),
+        getCompany: createCompanyDataLoader()
 });
 
 const getExtrasWidgetInfo = (id) => {
