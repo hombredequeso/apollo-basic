@@ -21,14 +21,14 @@ const typeDefs = gql`
 # A library has a branch and books
   type Library {
     branch: String!
-    details: LibraryDetails
+    details: LibraryDetails!
     books: [Book!]
     articles: [Article!],
     address: Address
   }
 
   type LibraryDetails {
-    description: String
+    description: String!
   }
 
   # A book has a title and author
@@ -121,7 +121,7 @@ const typeDefs = gql`
   # Queries can fetch a list of libraries
   type Query {
     widgets: [WidgetWrapper!]!
-    libraries: [Library]
+    libraries: [Library]!
     a: AType
     as: [AType]
     b: BType

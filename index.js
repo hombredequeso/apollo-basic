@@ -191,6 +191,9 @@ const resolvers = {
       return {key: parent.branch};
     },
     details() {
+      // throw {descripton: "something went wrong"};
+      //return null;
+      // return undefined;
       return { description: "library details desc" };
     },
   },
