@@ -9,20 +9,20 @@ const libraries = [
 ];
 
 
-const addresses = [
-  {
+const addresses = {
+  downtown: {
     title: 'downtown',
     address: '1 nowheres ville'
   },
-  {
+  riverside: {
     title: 'riverside',
     address: '1 river rv'
   },
-  {
+  'J.K. Rowling': {
     title: 'J.K. Rowling',
     address: '1 rowling st'
   }
-]
+}
 
 // The branch field of a book indicates which library has it in stock
 const books = [

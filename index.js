@@ -23,7 +23,7 @@ const getCompany = (id) => {
 }
 
 const memoize = (fn) => {
-  logger.log('....creating empty cache....')
+  // logger.log('....creating empty cache....')
   let cache = {};
   return (...args) => {
     let n = args[0];  
@@ -188,7 +188,7 @@ const resolvers = {
       return articles.filter((a) => a.branch === parent.branch);
     },
     address(parent, _, context) {
-      return {};
+      return {key: parent.branch};
     },
     details() {
       return { description: "library details desc" };
@@ -252,9 +252,20 @@ const resolvers = {
       );
       return authorDs?.country;
     },
+    address(parent, _, context) {
+      const address = context.dataSources.addresses[parent];
+      return address;
+      // return {key: parent}
+    },
   },
+  // Address: 
+  // function (parent, args, context, info) {
+  //   const address = dataSources.addresses[parent.key];
+  //   return address;
+  // },
   Address: {
     title(parent, args, context, info) {
+      logger.log({resolver: "Address.title", parent: parent})
       return "address title";
     },
     address(parent, _, context) {
@@ -290,6 +301,7 @@ const resolvers = {
 
 const getDataSources = () => ({
         libraries,
+        addresses,
         books,
         authors,
         articles,
