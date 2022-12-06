@@ -2,22 +2,22 @@ const { ApolloServer, gql } = require('apollo-server');
 const { makeExecutableSchema } = require('@graphql-tools/schema');
 const { mapSchema, getDirective, MapperKind } = require('@graphql-tools/utils');
 const { defaultFieldResolver, graphql } = require('graphql');
-const {parse, visit} = require('graphql')
+const { parse, visit } = require('graphql')
 
 const { visitor, getFieldListingVisitor } = require('./visitor.js')
 
 const logger = console;
 
-const {libraries, addresses, books, articles, authors, a, b, cs, widgets, extrasWidgetInfo, companyReviews, company, companies } = require('./database.js')
+const { libraries, addresses, books, articles, authors, a, b, cs, widgets, extrasWidgetInfo, companyReviews, company, companies } = require('./database.js')
 const typeDefs = require('./schema.js')
 
-const {constValueDirectiveTransformer, countValueDirectiveTransformer} = require('./directives.js')
+const { constValueDirectiveTransformer, countValueDirectiveTransformer } = require('./directives.js')
 
 const getCompany = (id) => {
   logger.log('getCompany: ' + id);
   const result = companies[id] || null;
   logger.log('will return result: ', result)
-  return new Promise(function(resolve, reject){
+  return new Promise(function (resolve, reject) {
     setTimeout(() => resolve(result), 1000);
   })
 }
@@ -26,7 +26,7 @@ const memoize = (fn) => {
   // logger.log('....creating empty cache....')
   let cache = {};
   return (...args) => {
-    let n = args[0];  
+    let n = args[0];
     if (n in cache) {
       logger.log('Fetching from cache');
       return cache[n];
@@ -46,13 +46,13 @@ const memoize = (fn) => {
 //   return getCompanyDataLoader;
 // }
 
-const createCompanyDataLoader  = () => {
+const createCompanyDataLoader = () => {
   return memoize(getCompany);
 }
 
 function DataSource(data) {
   this.loader = null;
-  this.get = function() {
+  this.get = function () {
     logger.log('executing DataSource.get')
     if (this.loader !== null) {
       logger.log('using cached promise')
@@ -60,7 +60,7 @@ function DataSource(data) {
     }
 
     logger.log('creating new Promise...')
-    this.loader = new Promise(function(resolve, reject){
+    this.loader = new Promise(function (resolve, reject) {
       setTimeout(() => resolve(data), 1000);
     })
 
@@ -188,7 +188,7 @@ const resolvers = {
       return articles.filter((a) => a.branch === parent.branch);
     },
     address(parent, _, context) {
-      return {key: parent.branch};
+      return { key: parent.branch };
     },
     details() {
       // throw {descripton: "something went wrong"};
@@ -268,7 +268,7 @@ const resolvers = {
   // },
   Address: {
     title(parent, args, context, info) {
-      logger.log({resolver: "Address.title", parent: parent})
+      logger.log({ resolver: "Address.title", parent: parent })
       return "address title";
     },
     address(parent, _, context) {
@@ -277,7 +277,7 @@ const resolvers = {
   },
   Company: {
     name(parent, args, context, info) {
-      logger.log('Resolving Company.name:', {parent, args});
+      logger.log('Resolving Company.name:', { parent, args });
       return context.dataSources.getCompany(parent.id).then(x => {
         console.log("processing response to get name", x)
         return x.name;
@@ -303,16 +303,16 @@ const resolvers = {
 
 
 const getDataSources = () => ({
-        libraries,
-        addresses,
-        books,
-        authors,
-        articles,
-        a,
-        b,
-        cs,
-        company: new DataSource(company),
-        getCompany: createCompanyDataLoader()
+  libraries,
+  addresses,
+  books,
+  authors,
+  articles,
+  a,
+  b,
+  cs,
+  company: new DataSource(company),
+  getCompany: createCompanyDataLoader()
 });
 
 const getExtrasWidgetInfo = (id) => {
@@ -323,7 +323,7 @@ const getExtrasWidgetInfo = (id) => {
   }
   // console.log("getExtrasWidgetInfo")
 
-  return new Promise(function(resolve, reject){
+  return new Promise(function (resolve, reject) {
     setTimeout(() => resolve(result), 1000);
   })
 };
@@ -365,30 +365,30 @@ const server = new ApolloServer(
       dataSources: getDataSources(),
       data: getData()
     }),
-  plugins: [
-    {
-      async serverWillStart(x) {
-        logger.log('Server starting up!!!!!!\n' + JSON.stringify(x, null , ' '));
-      },
-      async requestDidStart(x) {
-        if (x?.request?.operationName === 'IntrospectionQuery') return;
+    plugins: [
+      {
+        async serverWillStart(x) {
+          logger.log('Server starting up!!!!!!\n' + JSON.stringify(x, null, ' '));
+        },
+        async requestDidStart(x) {
+          if (x?.request?.operationName === 'IntrospectionQuery') return;
 
-        const query = x.request?.query;
-        if (!query) return;
-        const parsedQuery = parse(query);
-        logger.log({parsedQuery});
-        visit(parsedQuery, visitor);
+          const query = x.request?.query;
+          if (!query) return;
+          const parsedQuery = parse(query);
+          logger.log({ parsedQuery });
+          visit(parsedQuery, visitor);
 
-        const currentPath = [];
-        const allPaths = [];
-        visit(parsedQuery, getFieldListingVisitor(currentPath, allPaths));
-        logger.log('allPaths: ', JSON.stringify(allPaths));
+          const currentPath = [];
+          const allPaths = [];
+          visit(parsedQuery, getFieldListingVisitor(currentPath, allPaths));
+          logger.log('allPaths: ', JSON.stringify(allPaths));
 
-        logger.log(`REQUEST DID START: ${x?.request?.operationName}`);
-        // console.log(`${JSON.stringify(x, null, ' ')}`);
+          logger.log(`REQUEST DID START: ${x?.request?.operationName}`);
+          // console.log(`${JSON.stringify(x, null, ' ')}`);
+        }
       }
-    }
-  ]
+    ]
   });
 
 
