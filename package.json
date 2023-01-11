@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "clean": "rm -rf node_modules",
     "run:dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -13,8 +14,9 @@
   "dependencies": {
     "@graphql-tools/schema": "^8.3.14",
     "@graphql-tools/utils": "^8.6.13",
-    "apollo-server": "^3.8.2",
-    "graphql": "^16.5.0",
+    "apollo-server": "^3.11.1",
+    "apollo-server-express": "^3.11.1",
+    "graphql": "^16.6.0",
     "nodemon": "^2.0.4"
   }
 }

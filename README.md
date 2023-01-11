@@ -2,7 +2,10 @@
 
 A very simple, apollo graphql setup for learning purposes.
 
-Features:
+## Usage
+See package.json scripts.
+
+## Features
 * As close to the metal as is reasonable.
 * Javascript (i.e. not Typescript, which is what you may want to use for real)
 * In memory database. 

@@ -1,8 +1,12 @@
-const { ApolloServer, gql } = require('apollo-server');
 const { makeExecutableSchema } = require('@graphql-tools/schema');
 const { mapSchema, getDirective, MapperKind } = require('@graphql-tools/utils');
 const { defaultFieldResolver, graphql } = require('graphql');
 const { parse, visit } = require('graphql')
+
+const express = require('express');
+const { ApolloServer, gql } = require('apollo-server-express');
+
+const http = require('http');
 
 const { visitor, getFieldListingVisitor } = require('./visitor.js')
 
@@ -391,8 +395,33 @@ const server = new ApolloServer(
     ]
   });
 
+const crashingMiddleware = (request, response, next) => {
+  throw 'crashingMiddleware has thrown';
+}
 
-// Launch the server
-server.listen().then(({ url }) => {
-  console.log(`🚀  Server ready at ${url}`);
-});
+const middlewareErrorCatchAll = (
+  error,
+  request,
+  response,
+  next
+) => {
+  console.log('middlewareErrorCatchAll', {error});
+  // Pass error to default express error handler
+  next(error);
+};
+
+async function startApolloServer() {
+  const app = express();
+
+  // app.use(crashingMiddleware);
+  // app.use(middlewareErrorCatchAll);
+  const httpServer = http.createServer(app);
+  await server.start(); //start the GraphQL server.
+  server.applyMiddleware({ app });
+  await new Promise((resolve) =>
+    httpServer.listen({ port: 4000 }, resolve) //run the server on port 4000
+  );
+  console.log(`Server ready at http://localhost:4000${server.graphqlPath}`);
+}
+
+startApolloServer();
